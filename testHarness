@@ -49,6 +49,8 @@ import re
 import sqlite3
 import copy
 import operator
+import json
+from collections import OrderedDict
 
 # Test result codes
 PASSED = 0
@@ -195,18 +197,56 @@ class Logger:
         self.depth = 0
         self.length = 0
 
+        if config['output.json'] is not None:
+            self.json = OrderedDict()
+            self.stack = list([self.json])
+            self.summary_data = None
+        else: self.json = None
+
+
+    def back(self):
+        return self.stack[len(self.stack) - 1]
+
+
+    def push(self, key):
+        #print 'JSON push(%s)' % key
+        self.back()[key] = OrderedDict()
+        self.stack.append(self.back()[key])
+
+
+    def pop(self, key):
+        #print 'JSON pop(%s)' % key
+        self.stack.pop()
+
+
+    def insert(self, key, value):
+        self.back()[key] = value
+
 
     def start(self):
-        labeled_bar(self.config, get_time_string())
+        start_time = get_time_string()
+
+        if self.json is not None:
+            self.insert('start', start_time)
+            self.push('suites')
+
+        labeled_bar(self.config, start_time)
         self.stream.write(
             format_line(self.config, 'Test Name: [reason...]', 'Result') + '\n')
 
 
     def end(self):
+        if self.json is not None:
+            self.pop('suites')
+            if self.summary_data is not None:
+                self.json['summary'] = self.summary_data
+
         labeled_bar(self.config, get_time_string())
 
 
     def summary_line(self, name, count):
+        if self.json is not None: self.summary_data[name.lower()] = count
+
         if count and self.config['color']:
             self.stream.write(bgcolors[name.lower()])
         self.stream.write(format_line(self.config, name, count))
@@ -216,6 +256,8 @@ class Logger:
 
 
     def summary(self, results):
+        if self.json is not None: self.summary_data = OrderedDict()
+
         labeled_bar(self.config, 'Summary')
 
         self.summary_line('Passed', results.passed)
@@ -235,22 +277,32 @@ class Logger:
         seconds %= 60 * 60
         minutes = seconds / 60
         seconds %= 60
-        
-        self.stream.write(
-            format_line(self.config, 'Time', '%d:%02d:%02d:%02d.%04d' %
-                        (delta.days, hours, minutes, seconds,
-                         delta.microseconds)) + '\n')
+
+        time = '%d:%02d:%02d:%02d.%04d' % (
+            delta.days, hours, minutes, seconds, delta.microseconds)
+        self.stream.write(format_line(self.config, 'Time', time) + '\n')
+
+        if self.json is not None:
+            self.summary_data['suites'] = results.suites
+            self.summary_data['tests'] = results.tests
+            self.summary_data['time'] = time
 
 
     def start_suite(self, suite):
+        if self.json is not None: self.push(suite.name)
         labeled_bar(self.config, 'Test Suite: ' + suite.name)
         
 
     def end_suite(self, suite):
-        pass
+        if self.json is not None: self.pop(suite.name)
 
 
     def start_test(self, test):
+        if self.json is not None:
+            self.push(test.name)
+            if hasattr(test, 'units') and test.units is not None:
+                self.push('units')
+
         if self.config['verbose']:
             self.stream.write(' '.join(test.command) + '\n')
 
@@ -267,6 +319,13 @@ class Logger:
 
     def end_test(self, test):
         self.depth -= 1
+
+        if self.json is not None:
+            if hasattr(test, 'units') and test.units is not None:
+                self.pop('units')
+            self.insert('status', status_names[test.status].lower())
+            if test.reason is not None: self.insert('reason', test.reason)
+            self.pop(test.name)
 
         if self.length == 0: return # Don't print if there were Units
 
@@ -285,7 +344,28 @@ class Logger:
             str = ' ' * (self.config['width'] - self.length) + str
         self.stream.write(str + '\n')
         self.length = 0
-        
+
+
+    def start_files(self):
+        if self.json is not None: self.push('files')
+
+    def file(self, test, path):
+        if self.json is None: return
+
+        # Read data
+        data = ''
+        try:
+            f = open(path)
+            data = f.read()
+        finally:
+            if f is not None: f.close()
+
+        filename = path[len(test.path) + 1:]
+        self.insert(filename, data)
+
+    def end_files(self):
+        if self.json is not None: self.pop('files')
+
 
 class Check:
     def initialize(self, test): pass
@@ -293,6 +373,7 @@ class Check:
     def starting(self, test): pass
     def check(self, test): return PASSED
     def view(self, test): pass
+    def log(self, test): pass
     def diff(self, test): return False
 
 
@@ -331,6 +412,10 @@ class CheckGroup(Check):
 
     def view(self, test):
         for check in self.checks: check.view(test)
+
+
+    def log(self, test):
+        for check in self.checks: check.log(test)
          
 
     def diff(self, test):
@@ -525,36 +610,47 @@ class CheckFile(Check):
         else: return FAILED # Output should exist
 
 
-    def view(self, test):
+    def get_files(self, test):
         expect = self.get_expect(test)
         output = self.get_output(test)
-        stream = test.config['stream']
-
         files = [expect, output]
 
         if test.config['view-unfiltered'] and self.filter:
             files.append(self.get_unfiltered_output(test))
 
         for path in files:
-            if os.path.exists(path):
-                dir, name = os.path.split(path)
-                if path == expect: name = 'expect/' + name
+            if os.path.exists(path): yield path
 
-                labeled_bar(test.config, name)
 
-                f = None
-                nl = True
-                try:
-                    f = open(path)
-                    for line in f:
-                        stream.write(line)
-                        nl = len(line) and line[-1:] == '\n'
-                finally:
-                    if f is not None: f.close()
+    def view(self, test):
+        expect = self.get_expect(test)
+        stream = test.config['stream']
 
-                if not nl: stream.write('\n')
+        for path in self.get_files(test):
+            dir, name = os.path.split(path)
+            if path == expect: name = 'expect/' + name
 
-            
+            labeled_bar(test.config, name)
+
+            f = None
+            nl = True
+            try:
+                f = open(path)
+                data = f.read()
+                nl = len(data) and data[-1:] == '\n'
+                stream.write(data)
+
+            finally:
+                if f is not None: f.close()
+
+            if not nl: stream.write('\n')
+
+
+    def log(self, test):
+        for path in self.get_files(test):
+            test.log.file(test, path)
+
+
     def diff(self, test):
         expect = self.get_expect(test)
         output = self.get_output(test)
@@ -977,6 +1073,10 @@ class Unit:
 
             self.config['stream'].flush()
 
+            if self.config['verbose']:
+                print 'stdin = ' + stdin
+                print 'testdir = ' + self.test_dir
+
             # Run test
             returncode = \
                 execute_proc(self.command, shell = False, stdin = input,
@@ -1032,11 +1132,19 @@ class Unit:
             self.reason = self.check.reason
 
         self.end_test()
+
+        # Logging
+        self.log.start_files()
+        if self.stdin and not isinstance(self.stdin, FileType):
+            stdin = self.stdin % self.config
+            if os.path.exists(stdin): self.log.file(self, stdin)
+        self.check.log(self)
+        self.log.end_files()
         self.log.end_test(self)
 
-        if self.failed():
-            if self.config['diff-failed']: self.diff()
-            if self.config['view-failed']: self.view()
+        if self.failed() and self.config['diff-failed']: self.diff()
+        if ((self.failed() and self.config['view-failed']) or
+            self.config['view-all']): self.view()
 
         return self.failed()
 
@@ -1527,6 +1635,15 @@ class TestHarness(TestSuite):
 
             self.log.end()
 
+        if self.config['output.json'] is not None:
+            f = None
+            try:
+                f = open(self.config['output.json'], 'w')
+                json.dump(self.log.json, f, indent = 2,
+                          separators = [',', ': '])
+            finally:
+                if f is not None: f.close()
+
         return failures
 
 
@@ -1598,6 +1715,8 @@ parser.add_option('', '--save-failed', help = 'save failed test results',
                   action = 'store_true', default = False, dest = 'save-failed')
 parser.add_option('', '--view-failed', help = 'view failed test results',
                   action = 'store_true', default = False, dest = 'view-failed')
+parser.add_option('', '--view-all', help = 'view all test results',
+                  action = 'store_true', default = False, dest = 'view-all')
 parser.add_option('', '--diff-failed', help = 'diff failed test results',
                   action = 'store_true', default = False, dest = 'diff-failed')
 parser.add_option('', '--view-unfiltered', help = 'display unfiltered files '
@@ -1606,7 +1725,8 @@ parser.add_option('', '--view-unfiltered', help = 'display unfiltered files '
                   dest = 'view-unfiltered')
 parser.add_option('', '--build', help = 'build tests before running',
                   default = False, action = 'store_true', dest = 'build')
-
+parser.add_option('', '--json', help = 'write JSON log file',
+                  dest = 'output.json')
 
 # Parse args
 options, args = parser.parse_args()

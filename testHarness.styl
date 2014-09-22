@@ -1,0 +1,80 @@
+body
+  width: 920px
+  margin: 1em auto
+  font-size: 12pt
+
+.test-suite, .test-summary
+  .initialized .status, .nonzero.initialized
+    background-color: cyan
+
+  .uninitialized .status, .nonzero.uninitialized
+    background-color: #cdcd00
+
+  .passed .status, .nonzero.passed
+    background-color: green
+
+  .failed .status, .nonzero.failed
+    color: white
+    background-color: red
+
+  .disabled .status, .nonzero.disabled
+    color: white
+    background-color: blue
+
+  .invalid .status, .nonzero.invalid
+    color: white
+    background-color: magenta
+
+  table
+    border-collapse: collapse
+
+  table, td, th
+    border: 1px solid #ddd
+    padding: 4px
+    white-space: nowrap
+
+  th.test-name, th.reason
+    text-align: left
+
+  .test-name .fa
+    width: 1em
+
+  .test
+    cursor: pointer
+
+  .unit .test-name
+    padding-left: 1em
+
+  .reason, .file-data
+    width: 100%
+
+  .status
+    text-align: center
+
+  td.status
+    text-transform: uppercase
+
+  .file
+    display: none
+
+    td
+      padding: 0
+
+  .file-name
+    text-align: left
+    vertical-align: top
+    padding-left: 1em
+
+  .file-data
+    white-space: pre
+    overflow-x: auto
+    font-family: mono
+
+.test-summary
+  th
+    text-transform: capitalize
+    text-align: left
+
+  td
+    text-align: right
+    width: 100%

@@ -1,0 +1,119 @@
+body {
+  width: 920px;
+  margin: 1em auto;
+  font-size: 12pt;
+}
+.test-suite .initialized .status,
+.test-summary .initialized .status,
+.test-suite .nonzero.initialized,
+.test-summary .nonzero.initialized {
+  background-color: #0ff;
+}
+.test-suite .uninitialized .status,
+.test-summary .uninitialized .status,
+.test-suite .nonzero.uninitialized,
+.test-summary .nonzero.uninitialized {
+  background-color: #cdcd00;
+}
+.test-suite .passed .status,
+.test-summary .passed .status,
+.test-suite .nonzero.passed,
+.test-summary .nonzero.passed {
+  background-color: #008000;
+}
+.test-suite .failed .status,
+.test-summary .failed .status,
+.test-suite .nonzero.failed,
+.test-summary .nonzero.failed {
+  color: #fff;
+  background-color: #f00;
+}
+.test-suite .disabled .status,
+.test-summary .disabled .status,
+.test-suite .nonzero.disabled,
+.test-summary .nonzero.disabled {
+  color: #fff;
+  background-color: #00f;
+}
+.test-suite .invalid .status,
+.test-summary .invalid .status,
+.test-suite .nonzero.invalid,
+.test-summary .nonzero.invalid {
+  color: #fff;
+  background-color: #f0f;
+}
+.test-suite table,
+.test-summary table {
+  border-collapse: collapse;
+}
+.test-suite table,
+.test-summary table,
+.test-suite td,
+.test-summary td,
+.test-suite th,
+.test-summary th {
+  border: 1px solid #ddd;
+  padding: 4px;
+  white-space: nowrap;
+}
+.test-suite th.test-name,
+.test-summary th.test-name,
+.test-suite th.reason,
+.test-summary th.reason {
+  text-align: left;
+}
+.test-suite .test-name .fa,
+.test-summary .test-name .fa {
+  width: 1em;
+}
+.test-suite .test,
+.test-summary .test {
+  cursor: pointer;
+}
+.test-suite .unit .test-name,
+.test-summary .unit .test-name {
+  padding-left: 1em;
+}
+.test-suite .reason,
+.test-summary .reason,
+.test-suite .file-data,
+.test-summary .file-data {
+  width: 100%;
+}
+.test-suite .status,
+.test-summary .status {
+  text-align: center;
+}
+.test-suite td.status,
+.test-summary td.status {
+  text-transform: uppercase;
+}
+.test-suite .file,
+.test-summary .file {
+  display: none;
+}
+.test-suite .file td,
+.test-summary .file td {
+  padding: 0;
+}
+.test-suite .file-name,
+.test-summary .file-name {
+  text-align: left;
+  vertical-align: top;
+  padding-left: 1em;
+}
+.test-suite .file-data,
+.test-summary .file-data {
+  white-space: pre;
+  overflow-x: auto;
+  font-family: mono;
+}
+.test-summary th {
+  text-transform: capitalize;
+  text-align: left;
+}
+.test-summary td {
+  text-align: right;
+  width: 100%;
+}
+

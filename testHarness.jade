@@ -1,0 +1,92 @@
+mixin test_row(test, test_name, klass)
+  tr(class=test.status + ' ' + klass)
+    td.test-name
+      if !test.units
+        span.fa.fa-caret-right
+      | #{test_name}
+    td.reason= test.reason
+    td.status= test.status
+
+
+mixin test(test, test_name, klass)
+  +test_row(test, test_name, klass)
+  if test.files
+    for data, filename in test.files
+      tr.file
+        th.file-name= filename
+        td(colspan=2)
+          .file-data(class=(data ? '' : 'empty'), title=(data ? '' : 'Empty'))
+            | #{data}
+
+
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    title Test Results - #{start}
+
+    - var cdn = 'http://cdnjs.cloudflare.com/ajax/libs'
+    link(rel='stylesheet' href=cdn +
+      '/twitter-bootstrap/3.2.0/css/bootstrap.min.css')
+    link(rel='stylesheet' href=cdn + '/highlight.js/8.2/styles/github.min.css')
+    link(rel='stylesheet'
+      href=cdn + '/font-awesome/4.2.0/css/font-awesome.min.css')
+
+    link(rel='stylesheet' href='testHarness.css')
+
+  body
+    h1 Test Results: #{start}
+    each suite, suite_name in suites
+      .test-suite
+        h2 Test Suite: #{suite_name}
+        table
+          tr
+            th.test-name Test
+            th.reason Reason
+            th.status Status
+          each test, test_name in suite
+            if test.units
+              +test_row(test, test_name, 'test')
+              each unit, unit_name in test.units
+                +test(unit, unit_name, 'test unit')
+            else
+              +test(test, test_name, 'test')
+
+    .test-summary
+      h2 Summary
+      table
+        for value, name in summary
+          tr(class=name + (value ? ' nonzero' : ''))
+            th= name
+            td= value
+      small Note that counts do not include test sub-units.
+
+    - var cdn = 'http://cdnjs.cloudflare.com/ajax/libs'
+    script(src=cdn + '/jquery/1.11.1/jquery.min.js')
+    script(src=cdn + '/highlight.js/8.2/highlight.min.js')
+    script
+      | $(function() {
+      |   $('.test-suite .file-data').each(function (i, block) {
+      |     if (!$(block).hasClass('empty'))
+      |       hljs.highlightBlock(block);
+      |   });
+      |//
+      |   $('.test td, .test th').click(function (e) {
+      |     var row = $(this).parent().next();
+      |//
+      |     var caret = $(this).find('span');
+      |     if (row.is(':visible')) {
+      |       caret.removeClass('fa-caret-down');
+      |       caret.addClass('fa-caret-right');
+      |     } else {
+      |       caret.addClass('fa-caret-down');
+      |       caret.removeClass('fa-caret-right');
+      |     }
+      |//
+      |     while (row.hasClass('file')) {
+      |       row.toggle('fast');
+      |       row = row.next();
+      |     }
+      |     e.preventDefault();
+      |   })
+      | })
