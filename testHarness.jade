@@ -13,10 +13,9 @@ mixin test(test, test_name, klass)
   if test.files
     for data, filename in test.files
       tr.file
-        th.file-name= filename
-        td(colspan=2)
-          .file-data(class=(data ? '' : 'empty'), title=(data ? '' : 'Empty'))
-            | #{data}
+        td.file-name= filename
+        td(colspan=2, title=(data ? '' : 'Empty'))
+          .file-data(class=(data ? '' : 'empty'))= data
 
 
 doctype html

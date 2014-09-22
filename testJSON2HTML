@@ -1,0 +1,17 @@
+#!/bin/bash
+
+TMPL="$(dirname "$0")/testHarness.jade"
+
+if [ ! -e "$TMPL" ]; then
+    echo Cannot find Jade template: $TMPL
+    exit 1
+fi
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <tests.json>"
+    exit 1
+fi
+
+JSON="$1"
+
+jade -P -O "$(cat "$JSON")" < $TMPL

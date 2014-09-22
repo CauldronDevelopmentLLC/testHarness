@@ -3,6 +3,10 @@ body
   margin: 1em auto
   font-size: 12pt
 
+.test-suite
+  th
+    background-color: #eee
+
 .test-suite, .test-summary
   .initialized .status, .nonzero.initialized
     background-color: cyan
@@ -60,15 +64,18 @@ body
     td
       padding: 0
 
-  .file-name
-    text-align: left
-    vertical-align: top
-    padding-left: 1em
+    .file-name
+      text-align: left
+      vertical-align: top
+      padding-left: 1em
+      font-weight: bold
+      color: #666
 
-  .file-data
-    white-space: pre
-    overflow-x: auto
-    font-family: mono
+    .file-data
+      white-space: pre
+      max-width: 900px
+      overflow-x: auto
+      font-family: mono
 
 .test-summary
   th

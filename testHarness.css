@@ -3,6 +3,9 @@ body {
   margin: 1em auto;
   font-size: 12pt;
 }
+.test-suite th {
+  background-color: #eee;
+}
 .test-suite .initialized .status,
 .test-summary .initialized .status,
 .test-suite .nonzero.initialized,
@@ -96,15 +99,18 @@ body {
 .test-summary .file td {
   padding: 0;
 }
-.test-suite .file-name,
-.test-summary .file-name {
+.test-suite .file .file-name,
+.test-summary .file .file-name {
   text-align: left;
   vertical-align: top;
   padding-left: 1em;
+  font-weight: bold;
+  color: #666;
 }
-.test-suite .file-data,
-.test-summary .file-data {
+.test-suite .file .file-data,
+.test-summary .file .file-data {
   white-space: pre;
+  max-width: 900px;
   overflow-x: auto;
   font-family: mono;
 }

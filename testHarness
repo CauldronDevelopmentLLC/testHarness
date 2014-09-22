@@ -349,6 +349,7 @@ class Logger:
     def start_files(self):
         if self.json is not None: self.push('files')
 
+
     def file(self, test, path):
         if self.json is None: return
 
@@ -360,7 +361,10 @@ class Logger:
         finally:
             if f is not None: f.close()
 
-        filename = path[len(test.path) + 1:]
+        filename = os.path.basename(path)
+        if re.search(r'/expect/[^/]*$', path):
+            filename = 'expect/' + filename
+
         self.insert(filename, data)
 
     def end_files(self):
@@ -414,8 +418,8 @@ class CheckGroup(Check):
         for check in self.checks: check.view(test)
 
 
-    def log(self, test):
-        for check in self.checks: check.log(test)
+    def log(self, test, with_expected):
+        for check in self.checks: check.log(test, with_expected)
          
 
     def diff(self, test):
@@ -610,15 +614,15 @@ class CheckFile(Check):
         else: return FAILED # Output should exist
 
 
-    def get_files(self, test):
-        expect = self.get_expect(test)
-        output = self.get_output(test)
-        files = [expect, output]
-
+    def get_file_paths(self, test, with_expected):
+        if with_expected: yield self.get_expect(test)
+        yield self.get_output(test)
         if test.config['view-unfiltered'] and self.filter:
-            files.append(self.get_unfiltered_output(test))
+            yield self.get_unfiltered_output(test)
 
-        for path in files:
+
+    def get_files(self, test, with_expected):
+        for path in self.get_file_paths(test, with_expected):
             if os.path.exists(path): yield path
 
 
@@ -646,8 +650,8 @@ class CheckFile(Check):
             if not nl: stream.write('\n')
 
 
-    def log(self, test):
-        for path in self.get_files(test):
+    def log(self, test, with_expected):
+        for path in self.get_files(test, with_expected):
             test.log.file(test, path)
 
 
@@ -1131,16 +1135,16 @@ class Unit:
             if self.status is None: raise Exception, 'Test result not set'
             self.reason = self.check.reason
 
-        self.end_test()
-
         # Logging
         self.log.start_files()
         if self.stdin and not isinstance(self.stdin, FileType):
             stdin = self.stdin % self.config
             if os.path.exists(stdin): self.log.file(self, stdin)
-        self.check.log(self)
+        self.check.log(self, self.failed())
         self.log.end_files()
         self.log.end_test(self)
+
+        self.end_test()
 
         if self.failed() and self.config['diff-failed']: self.diff()
         if ((self.failed() and self.config['view-failed']) or
