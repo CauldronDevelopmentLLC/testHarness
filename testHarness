@@ -54,7 +54,7 @@ import json
 try:
     from collections import OrderedDict
 except:
-    def OrderedDict:
+    def OrderedDict():
         dict()
 
 # Test result codes
