@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2.7
 #
 #  This software is available as Open-Source software under the
 #  terms of the new BSD license as follows:
@@ -50,7 +50,12 @@ import sqlite3
 import copy
 import operator
 import json
-from collections import OrderedDict
+
+try:
+    from collections import OrderedDict
+except:
+    def OrderedDict:
+        dict()
 
 # Test result codes
 PASSED = 0
@@ -377,7 +382,7 @@ class Check:
     def starting(self, test): pass
     def check(self, test): return PASSED
     def view(self, test): pass
-    def log(self, test): pass
+    def log(self, test, with_expected = False): pass
     def diff(self, test): return False
 
 
@@ -630,7 +635,7 @@ class CheckFile(Check):
         expect = self.get_expect(test)
         stream = test.config['stream']
 
-        for path in self.get_files(test):
+        for path in self.get_files(test, True):
             dir, name = os.path.split(path)
             if path == expect: name = 'expect/' + name
 
@@ -935,7 +940,7 @@ class Unit:
                  stdin = '%(data-dir)s/stdin', checks = [StandardCheck()],
                  test = None, start_test = None, end_test = None,
                  data_dir = None, expect_dir = None, copy = ['%(data-dir)s/*'],
-                 timeout = 300):
+                 timeout = 300, env = '%(data-dir)s/env'):
         self.parent = parent
         self.suite = parent
         self.config = dict(config) # copy
@@ -948,6 +953,7 @@ class Unit:
         self.reason = None
         self.log = self.config['logger']
         self.timeout = timeout
+        self.env = env
 
         # Paths
         if isinstance(parent, Test):
@@ -1065,6 +1071,19 @@ class Unit:
         err = None
         returncode = None
         try:
+            # Setup environment
+            env = None
+            if self.env:
+                try:
+                    if isinstance(self.env, FileType): env = json.load(self.env)
+                    else:
+                        env_path = self.env % self.config
+                        if os.path.exists(env_path):
+                            env = json.load(open(env_path, 'r'))
+                except Exception, e:
+                    raise HarnessError('Failed to parse env file, ' +
+                                       'must be JSON dictionary: ' + str(e))
+
             # Open files
             if self.stdin:
                 if isinstance(self.stdin, FileType): input = self.stdin
@@ -1084,7 +1103,8 @@ class Unit:
             # Run test
             returncode = \
                 execute_proc(self.command, shell = False, stdin = input,
-                             stdout = out, stderr = err, cwd = self.test_dir)
+                             stdout = out, stderr = err, cwd = self.test_dir,
+                             env = env)
         
         finally:
             # Close files
