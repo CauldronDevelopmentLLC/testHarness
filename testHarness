@@ -313,7 +313,7 @@ class Logger:
     self.summary_line('Invalid', results.invalid)
     bar()
     self.stream.write(
-      format_line('Suites ', results.suites) + '\n' +
+      format_line('Suites ', results.suites) + '\n'
       format_line('Tests ', results.tests) + '\n')
 
     delta = results.endTime - results.startTime
