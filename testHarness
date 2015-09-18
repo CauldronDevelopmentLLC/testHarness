@@ -174,7 +174,7 @@ def write_file(path, data):
 
 
 def split_cmd_line(cmd):
-  if isinstance(cmd, basestring): return shlex.split(cmd)
+  if isinstance(cmd, basestring): return shlex.split(str(cmd))
   return cmd
 
 
